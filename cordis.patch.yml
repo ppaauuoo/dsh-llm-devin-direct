@@ -1,0 +1,25 @@
+# yaml-language-server: $schema=none
+# Bundle config layer for dsh-llm-devin-direct. Applied to a profile when this
+# package is listed in package.json `dsh.profile.bundles`.
+#
+# The row `id` is also the settings namespace the loader derives for volatile
+# Config fields, so it must match `name` in package.json and lib/index.js.
+- insert:
+    - id: devin-direct
+      name: '@vorkna/dsh-llm-devin-direct'
+      config:
+        # Windsurf API key. Empty reads the Devin CLI credential store
+        # (~/.local/share/devin/credentials.toml).
+        apiKey: ''
+        # Override the credentials.toml path; empty uses the default above.
+        credentialsPath: ''
+        # API server host.
+        host: 'https://server.codeium.com'
+        # Client identity the server gates local-tier models on.
+        clientIde: 'devin-desktop'
+        # Desktop version string; empty reads the Devin Desktop product.json.
+        clientVersion: ''
+        # Output token cap for one request.
+        maxOutputTokens: 128000
+        # Cooperative timeout for one streamed request (ms).
+        timeoutMs: 900000

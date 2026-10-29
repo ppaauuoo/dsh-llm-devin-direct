@@ -1,0 +1,25 @@
+name: check
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  syntax:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: Install peer dependency
+        run: npm install --no-save @deepseek-ai/schemastery
+      - name: Syntax-check sources
+        run: |
+          for f in lib/*.js test/*.mjs; do node --check "$f"; done
+      # The test suite calls the live server.codeium.com endpoint with real
+      # credentials, so it cannot run here. These checks only catch syntax and
+      # resolution breakage; they do not verify the protocol.
+      - name: Module resolves
+        run: node -e "import('@vorkna/dsh-llm-devin-direct').then(m => { if (typeof m.apply !== 'function') process.exit(1); })"
