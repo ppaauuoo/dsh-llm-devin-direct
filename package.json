@@ -1,6 +1,6 @@
 {
   "name": "@vorkna/dsh-llm-devin-direct",
-  "version": "0.1.3",
+  "version": "0.1.4",
   "private": true,
   "description": "dsh LLM provider: Devin/Cognition models as a plain model stream, with the harness owning the tools",
   "license": "MIT",

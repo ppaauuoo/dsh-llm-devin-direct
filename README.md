@@ -85,11 +85,37 @@ All fields are optional; defaults work once you are signed in.
 | `host` | `https://server.codeium.com` | API server |
 | `clientIde` | `devin-desktop` | Server gates local-only models on this value — do not change casually |
 | `clientVersion` | `""` | Empty = read the desktop's `product.json` |
-| `models` | 7 entries | `{ id, devinModel, name }`; `id` is the dsh route, `devinModel` the wire uid |
+| `models` | 7 entries | `{ id, devinModel, name, efforts }`; `id` is the dsh route, `devinModel` the wire uid, `efforts` maps a level to its uid |
 | `maxOutputTokens` | `128000` | |
 | `timeoutMs` | `900000` | Per-request ceiling |
 | `maxImages` | `8` | Most recent non-offloaded images per request |
 | `maxImageBytes` | `5242880` | Per-image cap; larger images degrade to their text placeholder |
+
+## Reasoning effort
+
+The picker's effort selector is wired up, but it does **not** send an effort field — `GetChatMessageRequest` has none, and the server's `ModelInfo.inference_config.reasoning_effort` is not client-settable. Effort is chosen by the **model uid**, so `reasoningEffort` selects a different `devinModel`:
+
+```js
+efforts: { low: "gpt-6-1-sol-low", high: "gpt-6-1-sol-high", max: "gpt-6-1-sol-max" }
+```
+
+`listModels` / `resolveModel` advertise those levels as dsh's `reasoning` capability, and `stream()` maps `options.reasoningEffort` onto the uid. A level the route does not advertise falls back to `devinModel`, so a stale saved effort can never lose the route.
+
+The shipped ladders were probed against the live endpoint, which refuses an unknown uid with *"This model is no longer available for your account"* — so an accepted uid is a real model, not a silent fallback. They are **not uniform**, and `off` / `minimal` do not exist:
+
+| Route | Levels |
+| --- | --- |
+| `gpt-6-1-sol`, `claude-opus-5-5`, `claude-sonnet-5-5`, `gpt-6-luna` | `low`, `medium`, `high`, `xhigh`, `max` |
+| `swe-2` | `medium`, `high`, `max` |
+| `deepseek-v4-1-flash-1017` | `low`, `high`, `max` |
+
+A route with no `efforts` map advertises nothing and dsh hides the selector — which is the honest state for a uid whose other tiers are unverified. Verify a new ladder before adding it:
+
+```bash
+node test/effort.mjs                              # offline: capability shape + uid routing
+node test/effort-wire.mjs                         # live: every advertised uid answers
+node test/effort-wire.mjs swe-2-medium swe-2-max  # live: probe specific uids
+```
 
 ## Verify
 
@@ -104,6 +130,8 @@ node test/adapter.mjs     # dsh StreamChunk sequence is well-formed
 node test/loop.mjs        # tool call → tool result → answer (the real agent loop)
 node test/errors.mjs      # bad key surfaces as a clean error chunk
 node test/vision.mjs      # a real PNG reaches the model (user + tool-role images)
+node test/effort.mjs      # reasoning capability + effort→uid routing (offline)
+node test/effort-wire.mjs # every advertised effort uid is accepted (live)
 ```
 
 All should end in `RESULT: PASS`. `adapter.mjs` takes a model uid as an
